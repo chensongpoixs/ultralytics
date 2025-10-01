@@ -145,7 +145,7 @@ def select_device(device="", batch=0, newline=False, verbose=True):
 
     Args:
         device (str | torch.device, optional): Device string or torch.device object. Options are 'None', 'cpu', or
-            'cuda', or '0' or '0,1,2,3', or 'npu:0' Auto-selects the first available GPU, or CPU if no GPU is available.
+            'cuda', or '0' or '0,1,2,3'.Auto-selects the first available GPU, or CPU if no GPU is available.
         newline (bool, optional): If True, adds a newline at the end of the log string.
         verbose (bool, optional): If True, logs the device information.
 
