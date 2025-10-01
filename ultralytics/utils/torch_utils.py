@@ -144,19 +144,13 @@ def select_device(device="", batch=0, newline=False, verbose=True):
     exception if the requested device(s) are not available.
 
     Args:
-        device (str | torch.device, optional): Device string or torch.device object.
-            Options are 'None', 'cpu', 'cuda', 'npu', 'ascend', or '0' or '0,1,2,3'.
-            Also supports 'npu:0' for specific NPU devices.
-        batch (int, optional): Batch size being used in your model.
+        device (str | torch.device, optional): Device string or torch.device object. Options are 'None', 'cpu', or
+            'cuda', or '0' or '0,1,2,3', or 'npu:0' Auto-selects the first available GPU, or CPU if no GPU is available.
         newline (bool, optional): If True, adds a newline at the end of the log string.
         verbose (bool, optional): If True, logs the device information.
 
     Returns:
         (torch.device): Selected device.
-
-    Raises:
-        ValueError: If the specified device is not available or if the batch size is not a multiple of the number of
-            devices when using multiple GPUs.
 
     Examples:
         >>> select_device("cuda:0")
@@ -164,9 +158,6 @@ def select_device(device="", batch=0, newline=False, verbose=True):
 
         >>> select_device("cpu")
         device(type='cpu')
-
-        >>> select_device("npu:0")
-        device(type='npu', index=0)
 
     Notes:
         Sets the 'CUDA_VISIBLE_DEVICES' environment variable for specifying which GPUs to use.
