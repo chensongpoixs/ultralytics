@@ -257,24 +257,25 @@ def select_device(device="", batch=0, newline=False, verbose=True):
                 f"{install}"
             )
 
-        # CUDA 分支：优先 GPU
-        devices = device.split(",") if device else ["0"]
-        n = len(devices)
-        if n > 1:
-            if batch < 1:
-                raise ValueError(
-                    "AutoBatch with batch<1 not supported for Multi-GPU training, "
-                    f"please specify a valid batch size multiple of GPU count {n}, i.e. batch={n * 8}."
-                )
-            if batch >= 0 and batch % n != 0:
-                raise ValueError(
-                    f"'batch={batch}' must be a multiple of GPU count {n}. Try 'batch={batch // n * n}' or "
-                    f"'batch={batch // n * n + n}', the nearest batch sizes evenly divisible by {n}."
-                )
-        space = " " * (len(s) + 1)
+    if not cpu and not mps and torch.cuda.is_available():  # prefer GPU if available
+        devices = device.split(",") if device else "0"  # i.e. "0,1" -> ["0", "1"]
+        space = " " * len(s)
         for i, d in enumerate(devices):
-            s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"
-        arg = f"cuda:{devices[0]}"
+            s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"  # bytes to MB
+        arg = "cuda:0"
+    elif not cpu and not mps and torch_npu.npu.is_available():
+        devices = device.split(",") if device else ["0"]
+        space = " " * len(s)
+        for i, d in enumerate(devices):
+            s += f"{'' if i == 0 else space}NPU:{d} ({get_gpu_info(i)})\n"  # bytes to MB
+        arg = "npu:0"
+    elif mps and TORCH_2_0 and torch.backends.mps.is_available():
+        # Prefer MPS if available
+        s += f"MPS ({get_cpu_info()})\n"
+        arg = "mps"
+    else:  # revert to CPU
+        s += f"CPU ({get_cpu_info()})\n"
+        arg = "cpu"
 
     if arg in {"cpu", "mps"}:
         torch.set_num_threads(NUM_THREADS)  # reset OMP_NUM_THREADS for cpu training
