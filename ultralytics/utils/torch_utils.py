@@ -105,16 +105,14 @@ def autocast(enabled: bool, device: str = "cuda"):
         ...     # Your mixed precision operations here
         ...     pass
     """
-
     if torch_npu.npu.is_available():
-        device = 'npu'
+        device = "npu"
     if torch.cuda.is_available():
-        device = 'cuda'
+        device = "cuda"
     if TORCH_1_13:
         return torch.amp.autocast(device, enabled=enabled)
     else:
         return torch.cuda.amp.autocast(enabled)
-
 
 
 @functools.lru_cache
@@ -169,6 +167,7 @@ def select_device(device="", batch=0, newline=False, verbose=True):
 
         >>> select_device("npu:0")
         device(type='npu', index=0)
+
     Notes:
         Sets the 'CUDA_VISIBLE_DEVICES' environment variable for specifying which GPUs to use.
     """
@@ -178,14 +177,11 @@ def select_device(device="", batch=0, newline=False, verbose=True):
     s = f"Ultralytics {__version__} 🚀 Python-{PYTHON_VERSION} torch-{torch.__version__} "
     device = str(device).lower()
     if torch_npu.npu.is_available():
-        origin_device = 'npu:' + device
+        origin_device = "npu:" + device
 
     cpu = device == "cpu"
     mps = origin_device in {"mps", "mps:0"}  # Apple Metal Performance Shaders (MPS)
-    npu = (
-            origin_device in {"npu", "ascend"} or
-            origin_device.startswith(("npu:", "ascend:"))
-    )
+    npu = origin_device in {"npu", "ascend"} or origin_device.startswith(("npu:", "ascend:"))
 
     for remove in "cuda:", "npu:", "ascend:", "none", "(", ")", "[", "]", "'", " ":
         device = device.replace(remove, "")  # to string, 'cuda:0' -> '0' and '(0, 1)' -> '0,1'
@@ -211,7 +207,6 @@ def select_device(device="", batch=0, newline=False, verbose=True):
             ids = origin_device.split(":", 1)[1].split(",")
 
         try:
-
             if not torch_npu.npu.is_available():
                 LOGGER.warning("NPU requested but torch_npu not available, falling back to CPU")
                 device = "cpu"
@@ -226,7 +221,7 @@ def select_device(device="", batch=0, newline=False, verbose=True):
                 # os.environ["ASCEND_VISIBLE_DEVICES"] = ids_str
                 s += f"NPU:{ids_str} ({get_cpu_info()})\n"
                 # arg = f"npu:{ids[0]}"  # torch.device 只接受单设备
-                arg = f"npu"
+                arg = "npu"
         except ImportError:
             LOGGER.warning("torch_npu not installed, falling back to CPU")
             device = "cpu"
