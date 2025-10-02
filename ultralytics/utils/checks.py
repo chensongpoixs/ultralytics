@@ -762,10 +762,9 @@ def check_amp(model):
     prefix = colorstr("AMP: ")
     if device.type in {"cpu", "mps"}:
         return False  # AMP only used on CUDA devices
-    elif "npu" in device.type:
+    elif 'npu' in device.type:
         try:
             import torch_npu  # noqa: F401
-
             # 可选：这里可加入更细的 NPU 机型/固件版本检查
             return True
         except Exception:

@@ -105,14 +105,16 @@ def autocast(enabled: bool, device: str = "cuda"):
         ...     # Your mixed precision operations here
         ...     pass
     """
+
     if torch_npu.npu.is_available():
-        device = "npu"
+        device = 'npu'
     if torch.cuda.is_available():
-        device = "cuda"
+        device = 'cuda'
     if TORCH_1_13:
         return torch.amp.autocast(device, enabled=enabled)
     else:
         return torch.cuda.amp.autocast(enabled)
+
 
 
 @functools.lru_cache
@@ -144,13 +146,19 @@ def select_device(device="", batch=0, newline=False, verbose=True):
     exception if the requested device(s) are not available.
 
     Args:
-        device (str | torch.device, optional): Device string or torch.device object. Options are 'None', 'cpu', or
-            'cuda', or '0' or '0,1,2,3'. Auto-selects the first available GPU, or CPU if no GPU is available.
+        device (str | torch.device, optional): Device string or torch.device object.
+            Options are 'None', 'cpu', 'cuda', 'npu', 'ascend', or '0' or '0,1,2,3'.
+            Also supports 'npu:0' for specific NPU devices.
+        batch (int, optional): Batch size being used in your model.
         newline (bool, optional): If True, adds a newline at the end of the log string.
         verbose (bool, optional): If True, logs the device information.
 
     Returns:
         (torch.device): Selected device.
+
+    Raises:
+        ValueError: If the specified device is not available or if the batch size is not a multiple of the number of
+            devices when using multiple GPUs.
 
     Examples:
         >>> select_device("cuda:0")
@@ -159,6 +167,8 @@ def select_device(device="", batch=0, newline=False, verbose=True):
         >>> select_device("cpu")
         device(type='cpu')
 
+        >>> select_device("npu:0")
+        device(type='npu', index=0)
     Notes:
         Sets the 'CUDA_VISIBLE_DEVICES' environment variable for specifying which GPUs to use.
     """
@@ -168,11 +178,14 @@ def select_device(device="", batch=0, newline=False, verbose=True):
     s = f"Ultralytics {__version__} 🚀 Python-{PYTHON_VERSION} torch-{torch.__version__} "
     device = str(device).lower()
     if torch_npu.npu.is_available():
-        origin_device = "npu:" + device
+        origin_device = 'npu:' + device
 
     cpu = device == "cpu"
     mps = origin_device in {"mps", "mps:0"}  # Apple Metal Performance Shaders (MPS)
-    npu = origin_device in {"npu", "ascend"} or origin_device.startswith(("npu:", "ascend:"))
+    npu = (
+            origin_device in {"npu", "ascend"} or
+            origin_device.startswith(("npu:", "ascend:"))
+    )
 
     for remove in "cuda:", "npu:", "ascend:", "none", "(", ")", "[", "]", "'", " ":
         device = device.replace(remove, "")  # to string, 'cuda:0' -> '0' and '(0, 1)' -> '0,1'
@@ -198,6 +211,7 @@ def select_device(device="", batch=0, newline=False, verbose=True):
             ids = origin_device.split(":", 1)[1].split(",")
 
         try:
+
             if not torch_npu.npu.is_available():
                 LOGGER.warning("NPU requested but torch_npu not available, falling back to CPU")
                 device = "cpu"
@@ -212,7 +226,7 @@ def select_device(device="", batch=0, newline=False, verbose=True):
                 # os.environ["ASCEND_VISIBLE_DEVICES"] = ids_str
                 s += f"NPU:{ids_str} ({get_cpu_info()})\n"
                 # arg = f"npu:{ids[0]}"  # torch.device 只接受单设备
-                arg = "npu"
+                arg = f"npu"
         except ImportError:
             LOGGER.warning("torch_npu not installed, falling back to CPU")
             device = "cpu"
@@ -243,25 +257,24 @@ def select_device(device="", batch=0, newline=False, verbose=True):
                 f"{install}"
             )
 
-    if not cpu and not mps and torch.cuda.is_available():  # prefer GPU if available
-        devices = device.split(",") if device else "0"  # i.e. "0,1" -> ["0", "1"]
-        space = " " * len(s)
-        for i, d in enumerate(devices):
-            s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"  # bytes to MB
-        arg = "cuda:0"
-    elif not cpu and not mps and torch_npu.npu.is_available():
+        # CUDA 分支：优先 GPU
         devices = device.split(",") if device else ["0"]
-        space = " " * len(s)
+        n = len(devices)
+        if n > 1:
+            if batch < 1:
+                raise ValueError(
+                    "AutoBatch with batch<1 not supported for Multi-GPU training, "
+                    f"please specify a valid batch size multiple of GPU count {n}, i.e. batch={n * 8}."
+                )
+            if batch >= 0 and batch % n != 0:
+                raise ValueError(
+                    f"'batch={batch}' must be a multiple of GPU count {n}. Try 'batch={batch // n * n}' or "
+                    f"'batch={batch // n * n + n}', the nearest batch sizes evenly divisible by {n}."
+                )
+        space = " " * (len(s) + 1)
         for i, d in enumerate(devices):
-            s += f"{'' if i == 0 else space}NPU:{d} ({get_gpu_info(i)})\n"  # bytes to MB
-        arg = "npu:0"
-    elif mps and TORCH_2_0 and torch.backends.mps.is_available():
-        # Prefer MPS if available
-        s += f"MPS ({get_cpu_info()})\n"
-        arg = "mps"
-    else:  # revert to CPU
-        s += f"CPU ({get_cpu_info()})\n"
-        arg = "cpu"
+            s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"
+        arg = f"cuda:{devices[0]}"
 
     if arg in {"cpu", "mps"}:
         torch.set_num_threads(NUM_THREADS)  # reset OMP_NUM_THREADS for cpu training

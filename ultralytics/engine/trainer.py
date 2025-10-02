@@ -259,7 +259,6 @@ class BaseTrainer:
         elif device_type == "npu":
             try:
                 import torch_npu  # noqa: F401
-
                 torch.npu.set_device(RANK)
                 self.device = torch.device("npu", RANK)
                 backend = "hccl"
@@ -277,7 +276,6 @@ class BaseTrainer:
             rank=RANK,
             world_size=self.world_size,
         )
-
     def _setup_train(self):
         """Build dataloaders and optimizer on correct rank process."""
         ckpt = self.setup_model()
@@ -559,7 +557,6 @@ class BaseTrainer:
         elif self.device.type == "npu":
             try:
                 import torch_npu  # noqa: F401
-
                 # reserved memory in bytes if available
                 memory = getattr(torch.npu, "memory_reserved", lambda: 0)() or 0
                 if fraction:
@@ -577,7 +574,7 @@ class BaseTrainer:
             memory = torch.cuda.memory_reserved()
             if fraction:
                 total = torch.cuda.get_device_properties(self.device).total_memory
-
+        
         return ((memory / total) if total > 0 else 0) if fraction else (memory / 2**30)
 
     def _clear_memory(self, threshold: float = None):
