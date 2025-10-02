@@ -137,7 +137,7 @@ def get_gpu_info(index):
     return f"{properties.name}, {properties.total_memory / (1 << 20):.0f}MiB"
 
 
-def select_device(device="", batch=0, newline=False, verbose=True):
+def select_device(device="", newline=False, verbose=True):
     """
     Select the appropriate PyTorch device based on the provided arguments.
 
