@@ -220,10 +220,16 @@ def test_val(task: str, weight: str, data: str) -> None:
 
 
 @pytest.mark.skipif(IS_JETSON or IS_RASPBERRYPI, reason="Edge devices not intended for training")
-def test_train_scratch():
+def test_train_scratch_train():
     """Test training the YOLO model from scratch using the provided configuration."""
     model = YOLO(CFG)
     model.train(data="coco8.yaml", epochs=2, imgsz=32, cache="disk", batch=-1, close_mosaic=1, name="model")
+
+
+@pytest.mark.skipif(IS_JETSON or IS_RASPBERRYPI, reason="Edge devices not intended for training")
+def test_train_scratch_predict():
+    """Test prediction of the YOLO model from scratch."""
+    model = YOLO(CFG)
     model(SOURCE)
 
 
@@ -235,12 +241,18 @@ def test_train_ndjson():
 
 
 @pytest.mark.parametrize("scls", [False, True])
-def test_train_pretrained(scls):
+def test_train_pretrained_train(scls):
     """Test training of the YOLO model starting from a pre-trained checkpoint."""
     model = YOLO(WEIGHTS_DIR / "yolo11n-seg.pt")
     model.train(
         data="coco8-seg.yaml", epochs=1, imgsz=32, cache="ram", copy_paste=0.5, mixup=0.5, name=0, single_cls=scls
     )
+
+
+@pytest.mark.parametrize("scls", [False, True])
+def test_train_pretrained_predict(scls):
+    """Test prediction of the YOLO model starting from a pre-trained checkpoint."""
+    model = YOLO(WEIGHTS_DIR / "yolo11n-seg.pt")
     model(SOURCE)
 
 
@@ -255,12 +267,30 @@ def test_all_model_yamls():
 
 
 @pytest.mark.skipif(WINDOWS, reason="Windows slow CI export bug https://github.com/ultralytics/ultralytics/pull/16003")
-def test_workflow():
-    """Test the complete workflow including training, validation, prediction, and exporting."""
+def test_workflow_train():
+    """Test the complete workflow including training."""
     model = YOLO(MODEL)
     model.train(data="coco8.yaml", epochs=1, imgsz=32, optimizer="SGD")
+
+
+@pytest.mark.skipif(WINDOWS, reason="Windows slow CI export bug https://github.com/ultralytics/ultralytics/pull/16003")
+def test_workflow_val():
+    """Test the complete workflow including validation."""
+    model = YOLO(MODEL)
     model.val(imgsz=32)
+
+
+@pytest.mark.skipif(WINDOWS, reason="Windows slow CI export bug https://github.com/ultralytics/ultralytics/pull/16003")
+def test_workflow_predict():
+    """Test the complete workflow including prediction."""
+    model = YOLO(MODEL)
     model.predict(SOURCE, imgsz=32)
+
+
+@pytest.mark.skipif(WINDOWS, reason="Windows slow CI export bug https://github.com/ultralytics/ultralytics/pull/16003")
+def test_workflow_export():
+    """Test the complete workflow including exporting."""
+    model = YOLO(MODEL)
     model.export(format="torchscript")  # WARNING: Windows slow CI export bug
 
 
@@ -604,12 +634,20 @@ def test_model_embeddings():
     checks.IS_PYTHON_3_8 and LINUX and ARM64,
     reason="YOLOWorld with CLIP is not supported in Python 3.8 and aarch64 Linux",
 )
-def test_yolo_world():
-    """Test YOLO world models with CLIP support."""
+def test_yolo_world_predict():
+    """Test YOLO world models prediction with CLIP support."""
     model = YOLO(WEIGHTS_DIR / "yolov8s-world.pt")  # no YOLO11n-world model yet
     model.set_classes(["tree", "window"])
     model(SOURCE, conf=0.01)
 
+
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOWorld with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOWorld with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yolo_world_train_pretrained():
+    """Test YOLO world models training from pretrained with CLIP support."""
     model = YOLO(WEIGHTS_DIR / "yolov8s-worldv2.pt")  # no YOLO11n-world model yet
     # Training from a pretrained model. Eval is included at the final stage of training.
     # Use dota8.yaml which has fewer categories to reduce the inference time of CLIP model
@@ -621,9 +659,16 @@ def test_yolo_world():
         close_mosaic=1,
     )
 
+
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOWorld with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOWorld with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yolo_world_train_scratch():
+    """Test YOLO world models training from scratch with CLIP support."""
     # test WorWorldTrainerFromScratch
     from ultralytics.models.yolo.world.train_world import WorldTrainerFromScratch
-
     model = YOLO("yolov8s-worldv2.yaml")  # no YOLO11n-world model yet
     model.train(
         data={"train": {"yolo_data": ["dota8.yaml"]}, "val": {"yolo_data": ["dota8.yaml"]}},
@@ -641,8 +686,8 @@ def test_yolo_world():
     checks.IS_PYTHON_3_8 and LINUX and ARM64,
     reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
 )
-def test_yoloe():
-    """Test YOLOE models with MobileClip support."""
+def test_yoloe_predict_text():
+    """Test YOLOE models prediction with text prompts."""
     # Predict
     # text-prompts
     model = YOLO(WEIGHTS_DIR / "yoloe-11s-seg.pt")
@@ -650,29 +695,70 @@ def test_yoloe():
     model.set_classes(names, model.get_text_pe(names))
     model(SOURCE, conf=0.01)
 
-    from ultralytics import YOLOE
-    from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor
 
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_predict_visual():
+    """Test YOLOE models prediction with visual prompts."""
+    from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor
     # visual-prompts
     visuals = dict(
         bboxes=np.array([[221.52, 405.8, 344.98, 857.54], [120, 425, 160, 445]]),
         cls=np.array([0, 1]),
     )
+    model = YOLO(WEIGHTS_DIR / "yoloe-11s-seg.pt")
     model.predict(
         SOURCE,
         visual_prompts=visuals,
         predictor=YOLOEVPSegPredictor,
     )
 
-    # Val
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_val_text():
+    """Test YOLOE models validation with text prompts."""
+    from ultralytics import YOLOE
+
     model = YOLOE(WEIGHTS_DIR / "yoloe-11s-seg.pt")
     # text prompts
     model.val(data="coco128-seg.yaml", imgsz=32)
+
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_val_visual():
+    """Test YOLOE models validation with visual prompts."""
+    from ultralytics import YOLOE
+
+    model = YOLOE(WEIGHTS_DIR / "yoloe-11s-seg.pt")
     # visual prompts
     model.val(data="coco128-seg.yaml", load_vp=True, imgsz=32)
 
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_train_fine_tune():
+    """Test YOLOE models training fine-tune."""
     # Train, fine-tune
-    from ultralytics.models.yolo.yoloe import YOLOEPESegTrainer, YOLOESegTrainerFromScratch
+    from ultralytics.models.yolo.yoloe import YOLOEPESegTrainer
+    from ultralytics import YOLOE
 
     model = YOLOE("yoloe-11s-seg.pt")
     model.train(
@@ -682,7 +768,20 @@ def test_yoloe():
         trainer=YOLOEPESegTrainer,
         imgsz=32,
     )
+
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_train_scratch():
+    """Test YOLOE models training from scratch."""
     # Train, from scratch
+    from ultralytics.models.yolo.yoloe import YOLOESegTrainerFromScratch
+    from ultralytics import YOLOE
+
     model = YOLOE("yoloe-11s-seg.yaml")
     model.train(
         data=dict(train=dict(yolo_data=["coco128-seg.yaml"]), val=dict(yolo_data=["coco128-seg.yaml"])),
@@ -692,38 +791,86 @@ def test_yoloe():
         imgsz=32,
     )
 
-    # prompt-free
-    # predict
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_predict_pf():
+    """Test YOLOE models prediction prompt-free."""
+    from ultralytics import YOLOE
+
     model = YOLOE(WEIGHTS_DIR / "yoloe-11s-seg-pf.pt")
     model.predict(SOURCE)
-    # val
+
+
+@pytest.mark.skipif(not TORCH_1_13, reason="YOLOE with CLIP requires torch>=1.13")
+@pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="YOLOE with CLIP is not supported in Python 3.12")
+@pytest.mark.skipif(
+    checks.IS_PYTHON_3_8 and LINUX and ARM64,
+    reason="YOLOE with CLIP is not supported in Python 3.8 and aarch64 Linux",
+)
+def test_yoloe_val_pf():
+    """Test YOLOE models validation prompt-free."""
+    from ultralytics import YOLOE
     model = YOLOE("yoloe-11s-seg.pt")  # or select yoloe-m/l-seg.pt for different sizes
     model.val(data="coco128-seg.yaml", imgsz=32)
 
 
-def test_yolov10():
-    """Test YOLOv10 model training, validation, and prediction functionality."""
+def test_yolov10_train():
+    """Test YOLOv10 model training."""
     model = YOLO("yolov10n.yaml")
-    # train/val/predict
     model.train(data="coco8.yaml", epochs=1, imgsz=32, close_mosaic=1, cache="disk")
+
+
+def test_yolov10_val():
+    """Test YOLOv10 model validation."""
+    model = YOLO("yolov10n.yaml")
     model.val(data="coco8.yaml", imgsz=32)
+
+
+def test_yolov10_predict_args():
+    """Test YOLOv10 model prediction with args."""
+    model = YOLO("yolov10n.yaml")
     model.predict(imgsz=32, save_txt=True, save_crop=True, augment=True)
+
+
+def test_yolov10_predict_source():
+    """Test YOLOv10 model prediction with source."""
+    model = YOLO("yolov10n.yaml")
     model(SOURCE)
 
 
-def test_multichannel():
-    """Test YOLO model multi-channel training, validation, and prediction functionality."""
+def test_multichannel_train():
+    """Test YOLO model multi-channel training."""
     model = YOLO("yolo11n.pt")
     model.train(data="coco8-multispectral.yaml", epochs=1, imgsz=32, close_mosaic=1, cache="disk")
+
+
+def test_multichannel_val():
+    """Test YOLO model multi-channel validation."""
+    model = YOLO("yolo11n.pt")
     model.val(data="coco8-multispectral.yaml")
+
+
+def test_multichannel_predict():
+    """Test YOLO model multi-channel prediction."""
+    model = YOLO("yolo11n.pt")
     im = np.zeros((32, 32, 10), dtype=np.uint8)
     model.predict(source=im, imgsz=32, save_txt=True, save_crop=True, augment=True)
+
+
+def test_multichannel_export():
+    """Test YOLO model multi-channel export."""
+    model = YOLO("yolo11n.pt")
     model.export(format="onnx")
 
 
 @pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
-def test_grayscale(task: str, model: str, data: str) -> None:
-    """Test YOLO model grayscale training, validation, and prediction functionality."""
+def test_grayscale_train(task: str, model: str, data: str) -> None:
+    """Test YOLO model grayscale training."""
     if task == "classify":  # not support grayscale classification yet
         return
     grayscale_data = Path(TMP) / f"{Path(data).stem}-grayscale.yaml"
@@ -734,13 +881,53 @@ def test_grayscale(task: str, model: str, data: str) -> None:
     for split in {"train", "val"}:
         for npy_file in (Path(data["path"]) / data[split]).glob("*.npy"):
             npy_file.unlink()
-
     model = YOLO(model)
     model.train(data=grayscale_data, epochs=1, imgsz=32, close_mosaic=1)
+
+
+@pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
+def test_grayscale_val(task: str, model: str, data: str) -> None:
+    """Test YOLO model grayscale validation."""
+    if task == "classify":  # not support grayscale classification yet
+        return
+    grayscale_data = Path(TMP) / f"{Path(data).stem}-grayscale.yaml"
+    data = check_det_dataset(data)
+    data["channels"] = 1  # add additional channels key for grayscale
+    YAML.save(grayscale_data, data)
+    # remove npy files in train/val splits if exists, might be created by previous tests
+    for split in {"train", "val"}:
+        for npy_file in (Path(data["path"]) / data[split]).glob("*.npy"):
+            npy_file.unlink()
+    model = YOLO(model)
     model.val(data=grayscale_data)
+
+
+@pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
+def test_grayscale_predict_trained(task: str, model: str, data: str) -> None:
+    """Test YOLO model grayscale prediction on trained model."""
+    if task == "classify":  # not support grayscale classification yet
+        return
+    model = YOLO(model)
     im = np.zeros((32, 32, 1), dtype=np.uint8)
     model.predict(source=im, imgsz=32, save_txt=True, save_crop=True, augment=True)
+
+
+@pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
+def test_grayscale_export(task: str, model: str, data: str) -> None:
+    """Test YOLO model grayscale export."""
+    if task == "classify":  # not support grayscale classification yet
+        return
+    model = YOLO(model)
     export_model = model.export(format="onnx")
 
+
+@pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
+def test_grayscale_predict_exported(task: str, model: str, data: str) -> None:
+    """Test YOLO model grayscale prediction on exported model."""
+    if task == "classify":  # not support grayscale classification yet
+        return
+    model = YOLO(model)
+    export_model = model.export(format="onnx")
     model = YOLO(export_model, task=task)
+    im = np.zeros((32, 32, 1), dtype=np.uint8)
     model.predict(source=im, imgsz=32)
