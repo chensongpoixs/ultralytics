@@ -669,6 +669,7 @@ def test_yolo_world_train_scratch():
     """Test YOLO world models training from scratch with CLIP support."""
     # test WorWorldTrainerFromScratch
     from ultralytics.models.yolo.world.train_world import WorldTrainerFromScratch
+
     model = YOLO("yolov8s-worldv2.yaml")  # no YOLO11n-world model yet
     model.train(
         data={"train": {"yolo_data": ["dota8.yaml"]}, "val": {"yolo_data": ["dota8.yaml"]}},
@@ -705,6 +706,7 @@ def test_yoloe_predict_text():
 def test_yoloe_predict_visual():
     """Test YOLOE models prediction with visual prompts."""
     from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor
+
     # visual-prompts
     visuals = dict(
         bboxes=np.array([[221.52, 405.8, 344.98, 857.54], [120, 425, 160, 445]]),
@@ -757,8 +759,8 @@ def test_yoloe_val_visual():
 def test_yoloe_train_fine_tune():
     """Test YOLOE models training fine-tune."""
     # Train, fine-tune
-    from ultralytics.models.yolo.yoloe import YOLOEPESegTrainer
     from ultralytics import YOLOE
+    from ultralytics.models.yolo.yoloe import YOLOEPESegTrainer
 
     model = YOLOE("yoloe-11s-seg.pt")
     model.train(
@@ -779,8 +781,8 @@ def test_yoloe_train_fine_tune():
 def test_yoloe_train_scratch():
     """Test YOLOE models training from scratch."""
     # Train, from scratch
-    from ultralytics.models.yolo.yoloe import YOLOESegTrainerFromScratch
     from ultralytics import YOLOE
+    from ultralytics.models.yolo.yoloe import YOLOESegTrainerFromScratch
 
     model = YOLOE("yoloe-11s-seg.yaml")
     model.train(
@@ -815,6 +817,7 @@ def test_yoloe_predict_pf():
 def test_yoloe_val_pf():
     """Test YOLOE models validation prompt-free."""
     from ultralytics import YOLOE
+
     model = YOLOE("yoloe-11s-seg.pt")  # or select yoloe-m/l-seg.pt for different sizes
     model.val(data="coco128-seg.yaml", imgsz=32)
 
@@ -918,7 +921,7 @@ def test_grayscale_export(task: str, model: str, data: str) -> None:
     if task == "classify":  # not support grayscale classification yet
         return
     model = YOLO(model)
-    export_model = model.export(format="onnx")
+    model.export(format="onnx")
 
 
 @pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
