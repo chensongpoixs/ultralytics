@@ -18,7 +18,7 @@ from ultralytics.utils import LOGGER, IterableSimpleNamespace, colorstr
 from ultralytics.utils.checks import check_version
 from ultralytics.utils.instance import Instances
 from ultralytics.utils.metrics import bbox_ioa
-from ultralytics.utils.ops import segment2box, xywh2xyxy, xyxyxyxy2xywhr
+from ultralytics.utils.ops import masks2segments, segment2box, xywh2xyxy, xyxyxyxy2xywhr
 from ultralytics.utils.torch_utils import TORCHVISION_0_10, TORCHVISION_0_11, TORCHVISION_0_13
 
 DEFAULT_MEAN = (0.0, 0.0, 0.0)
@@ -1952,13 +1952,19 @@ class Albumentations:
                 else transforms
             )
 
-            # Compose transforms
+            # Compose transforms with support for bboxes, keypoints, and masks
             self.contains_spatial = any(transform.__class__.__name__ in spatial_transforms for transform in T)
-            self.transform = (
-                A.Compose(T, bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]))
-                if self.contains_spatial
-                else A.Compose(T)
-            )
+            if self.contains_spatial:
+                # Add both bbox and keypoint parameters for full support
+                self.transform = A.Compose(
+                    T,
+                    bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]),
+                    keypoint_params=A.KeypointParams(
+                        format="xy", label_fields=["keypoint_labels"], remove_invisible=False
+                    ),
+                )
+            else:
+                self.transform = A.Compose(T)
             if hasattr(self.transform, "set_random_seed"):
                 # Required for deterministic transforms in albumentations>=1.4.21
                 self.transform.set_random_seed(torch.initial_seed())
@@ -2011,12 +2017,108 @@ class Albumentations:
                 labels["instances"].convert_bbox("xywh")
                 labels["instances"].normalize(*im.shape[:2][::-1])
                 bboxes = labels["instances"].bboxes
-                # TODO: add supports of segments and keypoints
-                new = self.transform(image=im, bboxes=bboxes, class_labels=cls)  # transformed
+
+                # Prepare transform arguments
+                transform_args = {"image": im, "bboxes": bboxes, "class_labels": cls}
+
+                # Add keypoints if present (for pose tasks)
+                keypoints = labels["instances"].keypoints
+                if keypoints is not None and len(keypoints):
+                    # Albumentations expects keypoints in (x, y) format, shape (N*num_kpts, 2)
+                    # YOLO keypoints are (N, num_kpts, 2 or 3) where last dim might include visibility
+                    kpts_xy = keypoints[..., :2].reshape(-1, 2)  # Flatten to (N*num_kpts, 2)
+                    keypoint_labels = [i for i in range(len(kpts_xy))]  # Create labels for each keypoint
+                    transform_args["keypoints"] = kpts_xy
+                    transform_args["keypoint_labels"] = keypoint_labels
+                else:
+                    # Provide empty keypoints to satisfy Albumentations keypoint_params
+                    transform_args["keypoints"] = []
+                    transform_args["keypoint_labels"] = []
+
+                # Add segments if present (for segmentation tasks)
+                segments = labels["instances"].segments
+                if segments is not None and len(segments):
+                    # Albumentations expects masks as a list of polygons or binary masks
+                    # For now, we'll convert segments to masks for proper transformation
+                    # Note: This requires the image dimensions
+                    h, w = im.shape[:2]
+                    masks = [polygons2masks((h, w), [seg], color=1)[0] for seg in segments] if len(segments) else []
+                    if masks:
+                        transform_args["masks"] = masks
+
+                # Apply transformation
+                new = self.transform(**transform_args)
+
                 if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                     labels["img"] = new["image"]
                     labels["cls"] = np.array(new["class_labels"])
                     bboxes = np.array(new["bboxes"], dtype=np.float32)
+
+                    # Update keypoints if they were transformed
+                    if keypoints is not None and len(keypoints) and "keypoints" in new:
+                        # Reshape back to (N, num_kpts, 2) and restore visibility if it existed
+                        # Use transformed count, not original count (some instances may have been filtered)
+                        num_instances = len(new["class_labels"])
+                        num_kpts_per_instance = keypoints.shape[1]
+
+                        # Calculate actual number of keypoints returned by Albumentations
+                        total_kpts = len(new["keypoints"])
+                        expected_kpts = num_instances * num_kpts_per_instance
+
+                        if total_kpts == expected_kpts:
+                            # Reshape normally
+                            new_kpts = np.array(new["keypoints"]).reshape(num_instances, num_kpts_per_instance, 2)
+                        else:
+                            # Mismatch - some keypoints may have been filtered
+                            # This shouldn't happen with proper Albumentations configuration
+                            # but handle it gracefully
+                            LOGGER.warning(
+                                f"Keypoint count mismatch after Albumentations: "
+                                f"expected {expected_kpts}, got {total_kpts}. "
+                                f"Skipping keypoint update."
+                            )
+                            new_kpts = None
+
+                        # Preserve visibility information if it existed (3rd dimension)
+                        if new_kpts is not None and keypoints.shape[2] == 3:
+                            # Filter visibility to match transformed instances
+                            visibility = keypoints[..., 2:3]  # Original visibility for all instances
+                            # Get indices of kept instances to filter visibility correctly
+                            # Since Albumentations may drop some instances, we need to match them
+                            # The visibility should be filtered based on which instances were kept
+                            if len(new["class_labels"]) < len(cls):
+                                # Some instances were dropped, need to identify which ones were kept
+                                # For now, we'll use the first N instances' visibility (this is a limitation)
+                                # A more robust solution would require Albumentations to return instance indices
+                                visibility = visibility[:num_instances]
+                            new_kpts = np.concatenate([new_kpts, visibility], axis=2)
+
+                        if new_kpts is not None:
+                            labels["instances"].keypoints = new_kpts
+                        else:
+                            # Keypoint update failed, set to None to avoid misalignment
+                            labels["instances"].keypoints = None
+
+                    # Update segments if they were transformed
+                    if segments is not None and len(segments) and "masks" in new:
+                        # Convert masks back to segments, keeping only valid ones
+                        new_segments = []
+                        valid_indices = []
+                        for i, mask in enumerate(new["masks"]):
+                            # Convert numpy mask to torch tensor for masks2segments
+                            mask_tensor = torch.from_numpy(mask.astype(np.uint8))[None]
+                            segs = masks2segments(mask_tensor)[0]  # Convert single mask
+                            if len(segs):  # Only keep if segment is valid
+                                new_segments.append(segs)
+                                valid_indices.append(i)
+
+                        # Filter bboxes and classes to match valid segments
+                        if len(valid_indices) < len(new["masks"]):
+                            bboxes = bboxes[valid_indices]
+                            labels["cls"] = labels["cls"][valid_indices]
+
+                        labels["instances"].segments = new_segments
+
                 labels["instances"].update(bboxes=bboxes)
         else:
             labels["img"] = self.transform(image=labels["img"])["image"]  # transformed
@@ -2609,6 +2711,7 @@ def classify_augmentations(
     force_color_jitter: bool = False,
     erasing: float = 0.0,
     interpolation: str = "BILINEAR",
+    augmentations: list | None = None,
 ):
     """Create a composition of image augmentation transforms for classification tasks.
 
@@ -2630,12 +2733,18 @@ def classify_augmentations(
         force_color_jitter (bool): Whether to apply color jitter even if auto augment is enabled.
         erasing (float): Probability of random erasing.
         interpolation (str): Interpolation method of either 'NEAREST', 'BILINEAR' or 'BICUBIC'.
+        augmentations (list | None): Optional list of custom Albumentations transforms for classification.
 
     Returns:
         (torchvision.transforms.Compose): A composition of image augmentation transforms.
 
     Examples:
         >>> transforms = classify_augmentations(size=224, auto_augment="randaugment")
+        >>> augmented_image = transforms(original_image)
+
+        >>> import albumentations as A
+        >>> custom_transforms = [A.Blur(p=0.5), A.CLAHE(p=0.3)]
+        >>> transforms = classify_augmentations(size=224, augmentations=custom_transforms)
         >>> augmented_image = transforms(original_image)
     """
     # Transforms to apply if Albumentations not installed
@@ -2653,6 +2762,37 @@ def classify_augmentations(
         primary_tfl.append(T.RandomVerticalFlip(p=vflip))
 
     secondary_tfl = []
+
+    # Add custom Albumentations transforms if provided
+    if augmentations is not None:
+        try:
+            import albumentations as A
+
+            # Wrap Albumentations in a torchvision-compatible transform
+            class AlbumentationsTransform:
+                """Wrapper to use Albumentations transforms with torchvision pipeline."""
+
+                def __init__(self, transform):
+                    self.transform = transform
+
+                def __call__(self, img):
+                    """Apply Albumentations transform to PIL image."""
+                    # Convert PIL to numpy array
+                    img_np = np.array(img)
+                    # Apply Albumentations
+                    augmented = self.transform(image=img_np)
+                    # Convert back to PIL
+                    return Image.fromarray(augmented["image"])
+
+            # Create Albumentations compose
+            alb_transform = A.Compose(augmentations)
+            secondary_tfl.append(AlbumentationsTransform(alb_transform))
+            LOGGER.info(f"Custom Albumentations transforms added for classification: {augmentations}")
+        except ImportError:
+            LOGGER.warning("Albumentations not installed. Custom augmentations will be ignored.")
+        except Exception as e:
+            LOGGER.warning(f"Error setting up custom Albumentations: {e}")
+
     disable_color_jitter = False
     if auto_augment:
         assert isinstance(auto_augment, str), f"Provided argument should be string, but got type {type(auto_augment)}"
