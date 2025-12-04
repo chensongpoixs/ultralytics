@@ -1187,7 +1187,12 @@ class RandomPerspective:
             return bboxes, segments
 
         out_of_bounds = [
-            (segment[:, 0] < 0) | (segment[:, 0] > self.size[0]) | (segment[:, 1] < 0) | (segment[:, 1] > self.size[1])
+            (
+                (segment[:, 0] < 0)
+                | (segment[:, 0] > self.size[0])
+                | (segment[:, 1] < 0)
+                | (segment[:, 1] > self.size[1])
+            ).any()
             for segment in segments
         ]
 
