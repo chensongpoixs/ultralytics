@@ -1171,7 +1171,6 @@ class RandomPerspective:
             >>> M = np.eye(3)  # Identity transformation matrix
             >>> new_bboxes, new_segments = apply_segments(segments, M)
         """
-        import shapely
 
         n, num = segments.shape[:2]
         if n == 0:
@@ -1185,13 +1184,26 @@ class RandomPerspective:
         segments = xy.reshape(n, -1, 2)
         bboxes = np.stack([segment2box(xy, self.size[0], self.size[1]) for xy in segments], 0)
 
-        image_rect = shapely.geometry.box(0, 0, self.size[0], self.size[1])
-        segments_clipped = []
-        for segment in segments:
-            segment_clipped = shapely.geometry.Polygon(segment).intersection(image_rect)
-            assert isinstance(segment_clipped, shapely.geometry.Polygon)
-            segments_clipped.append(np.array(segment_clipped.exterior.xy).T)
-        return bboxes, np.array(segments_clipped)
+        out_of_bounds = [
+            (segment[:, 0] < 0) | (segment[:, 0] > self.size[0]) | (segment[:, 1] < 0) | (segment[:, 1] > self.size[1])
+            for segment in segments
+        ]
+
+        if not any(out_of_bounds):
+            return bboxes, segments
+        else:
+            import shapely
+
+            image_rect = shapely.geometry.box(0, 0, self.size[0], self.size[1])
+            segments_clipped = []
+            for segment, is_out_of_bounds in zip(segments, out_of_bounds):
+                if not is_out_of_bounds:
+                    segments_clipped.append(segment)
+                    continue
+                segment_clipped = shapely.geometry.Polygon(segment).intersection(image_rect)
+                assert isinstance(segment_clipped, shapely.geometry.Polygon)
+                segments_clipped.append(np.array(segment_clipped.exterior.xy).T)
+            return bboxes, np.array(segments_clipped)
 
     def apply_keypoints(self, keypoints: np.ndarray, M: np.ndarray) -> np.ndarray:
         """Apply affine transformation to keypoints.
