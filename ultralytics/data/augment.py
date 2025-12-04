@@ -252,9 +252,9 @@ class Compose:
         """
         assert isinstance(index, (int, list)), f"The indices should be either list or int type but got {type(index)}"
         if isinstance(index, list):
-            assert isinstance(value, list), (
-                f"The indices should be the same type as values, but got {type(index)} and {type(value)}"
-            )
+            assert isinstance(
+                value, list
+            ), f"The indices should be the same type as values, but got {type(index)} and {type(value)}"
         if isinstance(index, int):
             index, value = [index], [value]
         for i, v in zip(index, value):
@@ -1171,6 +1171,8 @@ class RandomPerspective:
             >>> M = np.eye(3)  # Identity transformation matrix
             >>> new_bboxes, new_segments = apply_segments(segments, M)
         """
+        import shapely
+
         n, num = segments.shape[:2]
         if n == 0:
             return [], segments
@@ -1182,9 +1184,14 @@ class RandomPerspective:
         xy = xy[:, :2] / xy[:, 2:3]
         segments = xy.reshape(n, -1, 2)
         bboxes = np.stack([segment2box(xy, self.size[0], self.size[1]) for xy in segments], 0)
-        segments[..., 0] = segments[..., 0].clip(bboxes[:, 0:1], bboxes[:, 2:3])
-        segments[..., 1] = segments[..., 1].clip(bboxes[:, 1:2], bboxes[:, 3:4])
-        return bboxes, segments
+
+        image_rect = shapely.geometry.box(0, 0, self.size[0], self.size[1])
+        segments_clipped = []
+        for segment in segments:
+            segment_clipped = shapely.geometry.Polygon(segment).intersection(image_rect)
+            assert isinstance(segment_clipped, shapely.geometry.Polygon)
+            segments_clipped.append(np.array(segment_clipped.exterior.xy).T)
+        return bboxes, np.array(segments_clipped)
 
     def apply_keypoints(self, keypoints: np.ndarray, M: np.ndarray) -> np.ndarray:
         """Apply affine transformation to keypoints.
