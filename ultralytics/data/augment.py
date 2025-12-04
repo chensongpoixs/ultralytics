@@ -1171,7 +1171,6 @@ class RandomPerspective:
             >>> M = np.eye(3)  # Identity transformation matrix
             >>> new_bboxes, new_segments = apply_segments(segments, M)
         """
-
         n, num = segments.shape[:2]
         if n == 0:
             return [], segments
