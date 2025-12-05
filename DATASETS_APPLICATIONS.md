@@ -1,6 +1,7 @@
 # YOLOv8/11 数据集用途和应用场景完全指南
 
 ## 📌 快速导航
+
 - [通用检测数据集](#通用检测数据集)
 - [特定场景数据集](#特定场景数据集)
 - [分割数据集](#分割数据集)
@@ -13,9 +14,11 @@
 ## 🎯 通用检测数据集
 
 ### **COCO 2017 (coco.yaml)**
+
 **做什么的**: 最广泛使用的通用目标检测数据集
 
 **可以干嘛**:
+
 - ✅ 训练通用的目标检测模型
 - ✅ 检测日常生活中的物体（人、车、动物、食物等）
 - ✅ 作为基准评估模型性能
@@ -24,11 +27,13 @@
 - ✅ 竞赛和学术研究
 
 **典型应用**:
+
 ```python
 # 自动驾驶场景
 from ultralytics import YOLO
-model = YOLO('yolov8n.pt')  # 预训练于COCO
-results = model.predict('road.jpg')  # 检测：人、车、交通灯等
+
+model = YOLO("yolov8n.pt")  # 预训练于COCO
+results = model.predict("road.jpg")  # 检测：人、车、交通灯等
 
 # 智能监控
 # 检测视频中的行人和车辆进行安全监控
@@ -38,6 +43,7 @@ results = model.predict('road.jpg')  # 检测：人、车、交通灯等
 ```
 
 **数据集信息**:
+
 - 118,287张训练图像
 - 80个物体类别
 - 跨度大，覆盖广
@@ -45,9 +51,11 @@ results = model.predict('road.jpg')  # 检测：人、车、交通灯等
 ---
 
 ### **COCO8 (coco8.yaml)**
+
 **做什么的**: COCO的迷你版本，仅8张图像
 
 **可以干嘛**:
+
 - ✅ **快速调试代码** - 5秒内运行完整训练
 - ✅ **验证模型架构** - 确保代码没有bug
 - ✅ **CI/CD流程** - 自动化测试
@@ -55,18 +63,21 @@ results = model.predict('road.jpg')  # 检测：人、车、交通灯等
 - ✅ **性能测试** - 快速基准测试
 
 **典型应用**:
+
 ```python
 # 快速验证代码是否可以运行
 from ultralytics import YOLO
-model = YOLO('yolov8n.yaml')
-results = model.train(data='coco8.yaml', epochs=1)  # 1分钟完成
+
+model = YOLO("yolov8n.yaml")
+results = model.train(data="coco8.yaml", epochs=1)  # 1分钟完成
 
 # 在部署前验证所有功能
 model.val()
-model.export(format='onnx')
+model.export(format="onnx")
 ```
 
 **数据集信息**:
+
 - 仅4张训练 + 4张验证
 - 1 MB超小
 - 完全替代COCO的功能，但快速执行
@@ -74,9 +85,11 @@ model.export(format='onnx')
 ---
 
 ### **COCO128 (coco128.yaml)**
+
 **做什么的**: COCO的轻量版本，128张图像
 
 **可以干嘛**:
+
 - ✅ **快速原型设计** - 5-10分钟训练
 - ✅ **模型选择** - 快速对比不同模型
 - ✅ **超参数调优初步测试**
@@ -84,15 +97,17 @@ model.export(format='onnx')
 - ✅ **GPU内存测试** - 验证显卡容量
 
 **典型应用**:
+
 ```python
 # 快速选择最佳模型
-for model_name in ['yolov8n', 'yolov8s', 'yolov8m']:
-    model = YOLO(f'{model_name}.pt')
-    metrics = model.train(data='coco128.yaml', epochs=10)
+for model_name in ["yolov8n", "yolov8s", "yolov8m"]:
+    model = YOLO(f"{model_name}.pt")
+    metrics = model.train(data="coco128.yaml", epochs=10)
     # 比较精度和速度
 ```
 
 **数据集信息**:
+
 - 128张训练 + 128张验证
 - 7 MB
 - 代表性很好的小规模数据集
@@ -100,9 +115,11 @@ for model_name in ['yolov8n', 'yolov8s', 'yolov8m']:
 ---
 
 ### **PASCAL VOC (VOC.yaml)**
+
 **做什么的**: 经典的目标检测基准数据集
 
 **可以干嘛**:
+
 - ✅ **学术研究和论文** - 历史积累丰富
 - ✅ **模型对标** - 与其他论文对比性能
 - ✅ **教学和学习** - 理解目标检测的发展
@@ -110,10 +127,11 @@ for model_name in ['yolov8n', 'yolov8s', 'yolov8m']:
 - ✅ **迁移学习** - 在VOC上预训练，迁移到特定任务
 
 **典型应用**:
+
 ```python
 # 与历史论文对比
-model = YOLO('yolov8m.pt')
-metrics = model.val(data='voc.yaml')
+model = YOLO("yolov8m.pt")
+metrics = model.val(data="voc.yaml")
 print(metrics.box.map50)  # 与YOLOv3、Faster RCNN等对标
 
 # 特定应用：检测家具进行室内设计
@@ -121,6 +139,7 @@ print(metrics.box.map50)  # 与YOLOv3、Faster RCNN等对标
 ```
 
 **数据集信息**:
+
 - 16,551张训练图像
 - 20个类别（人物、动物、交通工具、家具等）
 - 2.8 GB
@@ -129,9 +148,11 @@ print(metrics.box.map50)  # 与YOLOv3、Faster RCNN等对标
 ---
 
 ### **xView (xView.yaml)**
+
 **做什么的**: 航拍/卫星影像中的目标检测
 
 **可以干嘛**:
+
 - ✅ **遥感影像分析** - 从卫星图识别物体
 - ✅ **城市规划** - 统计建筑、停车场、船只等
 - ✅ **灾难评估** - 地震、洪水后的损害评估
@@ -141,10 +162,11 @@ print(metrics.box.map50)  # 与YOLOv3、Faster RCNN等对标
 - ✅ **环境保护** - 非法采矿、偷猎监测
 
 **典型应用**:
+
 ```python
 # 从卫星图检测飞机
-model = YOLO('yolov8n.pt')
-model.train(data='xview.yaml', epochs=50)
+model = YOLO("yolov8n.pt")
+model.train(data="xview.yaml", epochs=50)
 
 # 应用：统计停车场中的车辆数
 # 应用：识别货轮位置进行海事监控
@@ -152,6 +174,7 @@ model.train(data='xview.yaml', epochs=50)
 ```
 
 **数据集信息**:
+
 - 847张超高分辨率航拍图像
 - 60种物体类别（飞机、船、工程机械、建筑等）
 - 20.7 GB
@@ -160,9 +183,11 @@ model.train(data='xview.yaml', epochs=50)
 ---
 
 ### **VisDrone (VisDrone.yaml)**
+
 **做什么的**: 无人机视角的目标检测
 
 **可以干嘛**:
+
 - ✅ **无人机监控** - 实时检测地面目标
 - ✅ **交通流量分析** - 统计车辆和行人
 - ✅ **公共安全** - 人群拥挤监测
@@ -172,10 +197,11 @@ model.train(data='xview.yaml', epochs=50)
 - ✅ **搜救行动** - 灾难中寻找遇难者
 
 **典型应用**:
+
 ```python
 # 无人机实时监控系统
-model = YOLO('yolov8m.pt')
-model.train(data='visdrone.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="visdrone.yaml", epochs=100)
 
 # 应用：交通监控
 # 检测行人、自行车、汽车、公交车等
@@ -188,6 +214,7 @@ model.train(data='visdrone.yaml', epochs=100)
 ```
 
 **数据集信息**:
+
 - 6,471张训练图像（无人机拍摄）
 - 548张验证 + 1,610张测试
 - 10个类别（行人、自行车、车、货车等）
@@ -197,9 +224,11 @@ model.train(data='visdrone.yaml', epochs=100)
 ---
 
 ### **Argoverse (Argoverse.yaml)**
+
 **做什么的**: 自动驾驶环境下的目标检测
 
 **可以干嘛**:
+
 - ✅ **自动驾驶** - 感知路上的车、行人、交通灯
 - ✅ **行为预测** - 预测其他车辆的运动轨迹
 - ✅ **路径规划** - 安全导航
@@ -207,21 +236,23 @@ model.train(data='visdrone.yaml', epochs=100)
 - ✅ **高精地图构建** - 使用多传感器数据构建3D地图
 
 **典型应用**:
+
 ```python
 # 自动驾驶感知系统
-model = YOLO('yolov8m.pt')
-model.train(data='argoverse.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="argoverse.yaml", epochs=100)
 
 # 检测：车、行人、自行车、摩托车、公交、货车、信号灯、停止标志
 
 # 应用：自动驾驶安全检测
-results = model.predict('car_camera_footage.mp4')
+results = model.predict("car_camera_footage.mp4")
 
 # 应用：交通研究
 # 分析城市交通流量和驾驶模式
 ```
 
 **数据集信息**:
+
 - 39,384张训练 + 15,062张验证
 - 8个类别（自动驾驶相关）
 - 31.5 GB
@@ -230,9 +261,11 @@ results = model.predict('car_camera_footage.mp4')
 ---
 
 ### **KITTI (kitti.yaml)**
+
 **做什么的**: 自动驾驶的标准基准数据集
 
 **可以干嘛**:
+
 - ✅ **自动驾驶算法开发** - 学术标准
 - ✅ **3D目标检测** - 获取深度信息
 - ✅ **模型对标** - 与其他自动驾驶方案对比
@@ -240,10 +273,11 @@ results = model.predict('car_camera_footage.mp4')
 - ✅ **追踪系统** - 多帧目标追踪
 
 **典型应用**:
+
 ```python
 # 自动驾驶研究
-model = YOLO('yolov8m.pt')
-results = model.train(data='kitti.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+results = model.train(data="kitti.yaml", epochs=100)
 
 # 检测：车、货车、行人、自行车等
 
@@ -252,6 +286,7 @@ results = model.train(data='kitti.yaml', epochs=100)
 ```
 
 **数据集信息**:
+
 - 5,985张训练 + 1,496张验证
 - 8个类别（车、货车、行人、骑手等）
 - 390.5 MB
@@ -260,9 +295,11 @@ results = model.train(data='kitti.yaml', epochs=100)
 ---
 
 ### **Objects365 (Objects365.yaml)**
+
 **做什么的**: 超大规模的通用目标检测数据集
 
 **可以干嘛**:
+
 - ✅ **通用物体检测** - 365个物体类别
 - ✅ **强大的预训练权重** - 比COCO更全面
 - ✅ **长尾检测** - 包含稀有物体
@@ -270,10 +307,11 @@ results = model.train(data='kitti.yaml', epochs=100)
 - ✅ **商业应用** - 包含日常生活物体、商品等
 
 **典型应用**:
+
 ```python
 # 训练通用检测模型
-model = YOLO('yolov8m.pt')
-model.train(data='objects365.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="objects365.yaml", epochs=100)
 
 # 可检测365种物体：
 # 人物配饰：鞋、帽子、眼镜、背包等
@@ -288,6 +326,7 @@ model.train(data='objects365.yaml', epochs=100)
 ```
 
 **数据集信息**:
+
 - 1,742,289张训练 + 80,000张验证
 - 365个类别
 - 712 GB（超大）
@@ -296,9 +335,11 @@ model.train(data='objects365.yaml', epochs=100)
 ---
 
 ### **LVIS (lvis.yaml)**
+
 **做什么的**: 包含稀有物体的长尾分布数据集
 
 **可以干嘛**:
+
 - ✅ **处理稀有物体检测** - 包括罕见物体
 - ✅ **研究长尾问题** - 学术研究
 - ✅ **评估模型泛化能力** - 更严格的评估
@@ -306,10 +347,11 @@ model.train(data='objects365.yaml', epochs=100)
 - ✅ **真实世界应用** - 实际中大多数物体都是稀有的
 
 **典型应用**:
+
 ```python
 # 训练鲁棒的检测模型
-model = YOLO('yolov8m.pt')
-model.train(data='lvis.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="lvis.yaml", epochs=100)
 
 # 可检测1203个物体：从常见到罕见
 # 挑战：如何在有限样本下检测稀有物体
@@ -320,6 +362,7 @@ model.train(data='lvis.yaml', epochs=100)
 ```
 
 **数据集信息**:
+
 - 100,170张训练 + 19,809张验证
 - 1,203个类别（包含罕见物体）
 - 20.1 GB
@@ -328,9 +371,11 @@ model.train(data='lvis.yaml', epochs=100)
 ---
 
 ### **Open Images v7 (open-images-v7.yaml)**
+
 **做什么的**: Google开源的最大开放检测数据集
 
 **可以干嘛**:
+
 - ✅ **最全面的检测模型** - 500+个类别
 - ✅ **Internet规模的训练** - 自然分布的图像
 - ✅ **多语言物体名称** - 全球应用
@@ -338,10 +383,11 @@ model.train(data='lvis.yaml', epochs=100)
 - ✅ **企业级应用** - Google也在用
 
 **典型应用**:
+
 ```python
 # 训练全能检测模型
-model = YOLO('yolov8m.pt')
-model.train(data='open-images-v7.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="open-images-v7.yaml", epochs=100)
 
 # 应用：图片搜索引擎
 # 应用：内容推荐系统
@@ -349,6 +395,7 @@ model.train(data='open-images-v7.yaml', epochs=100)
 ```
 
 **数据集信息**:
+
 - 1,743,042张训练 + 41,620张验证
 - 500+个类别
 - 561 GB（超大）
@@ -357,9 +404,11 @@ model.train(data='open-images-v7.yaml', epochs=100)
 ---
 
 ### **ImageNet (ImageNet.yaml)**
+
 **做什么的**: 最经典的图像分类数据集
 
 **可以干嘛**:
+
 - ✅ **图像分类任务** - 将图片分类到1000个类别
 - ✅ **预训练骨干网络** - CNN的标准预训练数据
 - ✅ **迁移学习** - 用预训练权重解决其他任务
@@ -367,11 +416,13 @@ model.train(data='open-images-v7.yaml', epochs=100)
 - ✅ **深度学习教学** - 理解CNN工作原理
 
 **典型应用**:
+
 ```python
 # 图像分类（非检测）
 from ultralytics import YOLO
-model = YOLO('yolov8n-cls.pt')  # 分类模型
-results = model.predict('dog.jpg')  # 返回：哪一种狗
+
+model = YOLO("yolov8n-cls.pt")  # 分类模型
+results = model.predict("dog.jpg")  # 返回：哪一种狗
 
 # 应用：植物识别应用
 # 应用：动物物种识别
@@ -379,6 +430,7 @@ results = model.predict('dog.jpg')  # 返回：哪一种狗
 ```
 
 **数据集信息**:
+
 - 1,281,167张训练 + 50,000张验证
 - 1,000个类别（细粒度分类）
 - 144 GB
@@ -389,9 +441,11 @@ results = model.predict('dog.jpg')  # 返回：哪一种狗
 ## 🌍 特定场景数据集
 
 ### **African-wildlife (african-wildlife.yaml)**
+
 **做什么的**: 检测非洲野生动物
 
 **可以干嘛**:
+
 - ✅ **野生动物保护** - 自动统计动物数量
 - ✅ **生态监测** - 跟踪濒危物种
 - ✅ **猎人追踪** - 防止偷猎
@@ -400,10 +454,11 @@ results = model.predict('dog.jpg')  # 返回：哪一种狗
 - ✅ **生物多样性评估** - 物种多样性监测
 
 **典型应用**:
+
 ```python
 # 野生动物监测摄像头
-model = YOLO('yolov8m.pt')
-model.train(data='african-wildlife.yaml', epochs=50)
+model = YOLO("yolov8m.pt")
+model.train(data="african-wildlife.yaml", epochs=50)
 
 # 自动识别：大象、水牛等
 
@@ -415,9 +470,11 @@ model.train(data='african-wildlife.yaml', epochs=50)
 ---
 
 ### **Brain-tumor (brain-tumor.yaml)**
+
 **做什么的**: 脑肿瘤医学影像检测
 
 **可以干嘛**:
+
 - ✅ **医学诊断** - 辅助医生检测肿瘤
 - ✅ **早期筛查** - 自动标记可疑区域
 - ✅ **治疗评估** - 监测肿瘤大小变化
@@ -425,10 +482,11 @@ model.train(data='african-wildlife.yaml', epochs=50)
 - ✅ **手术计划** - 确定手术范围
 
 **典型应用**:
+
 ```python
 # 医学影像AI诊断
-model = YOLO('yolov8m.pt')
-model.train(data='brain-tumor.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="brain-tumor.yaml", epochs=100)
 
 # 二分类：有肿瘤 vs 无肿瘤
 
@@ -440,9 +498,11 @@ model.train(data='brain-tumor.yaml', epochs=100)
 ---
 
 ### **Construction-PPE (construction-ppe.yaml)**
+
 **做什么的**: 建筑工地安全装备检测
 
 **可以干嘛**:
+
 - ✅ **工地安全监管** - 确保员工穿戴PPE
 - ✅ **违规警报** - 检测不合规行为
 - ✅ **事故预防** - 减少安全事故
@@ -451,10 +511,11 @@ model.train(data='brain-tumor.yaml', epochs=100)
 - ✅ **工人培训** - 监测培训效果
 
 **典型应用**:
+
 ```python
 # 工地安全监控系统
-model = YOLO('yolov8m.pt')
-model.train(data='construction-ppe.yaml', epochs=50)
+model = YOLO("yolov8m.pt")
+model.train(data="construction-ppe.yaml", epochs=50)
 
 # 检测：安全帽、手套、防护服等
 
@@ -469,9 +530,11 @@ if not helmet_detected and person_detected:
 ---
 
 ### **Medical-pills (medical-pills.yaml)**
+
 **做什么的**: 医药药丸识别
 
 **可以干嘛**:
+
 - ✅ **药物识别** - 识别药物类型
 - ✅ **药房自动化** - 自动分拣药物
 - ✅ **服药提醒** - 确认正确的药物
@@ -480,26 +543,29 @@ if not helmet_detected and person_detected:
 - ✅ **移动健康应用** - 用手机拍照识别药物
 
 **典型应用**:
+
 ```python
 # 药物识别应用
-model = YOLO('yolov8n.pt')
-model.train(data='medical-pills.yaml', epochs=50)
+model = YOLO("yolov8n.pt")
+model.train(data="medical-pills.yaml", epochs=50)
 
 # 应用：智能药盒
 # 应用：药房管理系统
 # 应用：患者服药确认
 
 # 使用：
-results = model.predict('pill_photo.jpg')
+results = model.predict("pill_photo.jpg")
 print(f"Identified pill: {results}")
 ```
 
 ---
 
 ### **HomeObjects-3K (HomeObjects-3K.yaml)**
+
 **做什么的**: 家居物体检测
 
 **可以干嘛**:
+
 - ✅ **家居自动化** - 智能家居控制
 - ✅ **机器人导航** - 家用机器人室内导航
 - ✅ **AR应用** - 虚拟家具预览
@@ -509,10 +575,11 @@ print(f"Identified pill: {results}")
 - ✅ **家居安全** - 入侵检测
 
 **典型应用**:
+
 ```python
 # 机器人家务助手
-model = YOLO('yolov8m.pt')
-model.train(data='homeobjects-3k.yaml', epochs=50)
+model = YOLO("yolov8m.pt")
+model.train(data="homeobjects-3k.yaml", epochs=50)
 
 # 检测：床、沙发、椅子、桌子等
 
@@ -524,9 +591,11 @@ model.train(data='homeobjects-3k.yaml', epochs=50)
 ---
 
 ### **SKU-110K (SKU-110K.yaml)**
+
 **做什么的**: 零售货架物品检测
 
 **可以干嘛**:
+
 - ✅ **库存管理** - 自动检测缺货
 - ✅ **货架监控** - 确保产品陈列规范
 - ✅ **价格检查** - 验证价格标签
@@ -536,14 +605,15 @@ model.train(data='homeobjects-3k.yaml', epochs=50)
 - ✅ **物流自动化** - 仓库管理
 
 **典型应用**:
+
 ```python
 # 零售智能监控系统
-model = YOLO('yolov8m.pt')
-model.train(data='sku-110k.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="sku-110k.yaml", epochs=100)
 
 # 应用：便利店自助收银
 # 应用：自动化库存检查
-results = model.predict('shelf.jpg')
+results = model.predict("shelf.jpg")
 if len(results) == 0:
     alert("Shelf is empty!")
 
@@ -554,9 +624,11 @@ if len(results) == 0:
 ---
 
 ### **Signature (signature.yaml)**
+
 **做什么的**: 签名检测和验证
 
 **可以干嘛**:
+
 - ✅ **文档处理** - 自动检测签名位置
 - ✅ **签名验证** - 防止签名伪造
 - ✅ **电子签名** - 数字签名系统
@@ -566,16 +638,17 @@ if len(results) == 0:
 - ✅ **身份验证** - 生物识别系统
 
 **典型应用**:
+
 ```python
 # 文档处理系统
-model = YOLO('yolov8n.pt')
-model.train(data='signature.yaml', epochs=50)
+model = YOLO("yolov8n.pt")
+model.train(data="signature.yaml", epochs=50)
 
 # 应用：自动合同处理
 # 应用：银行支票自动化
 # 应用：护照验证系统
 
-results = model.predict('document.jpg')
+results = model.predict("document.jpg")
 if signature_detected:
     print("Signature found, extract for verification")
 ```
@@ -583,9 +656,11 @@ if signature_detected:
 ---
 
 ### **GlobalWheat2020 (GlobalWheat2020.yaml)**
+
 **做什么的**: 小麦穗检测（农业应用）
 
 **可以干嘛**:
+
 - ✅ **作物产量预测** - 统计穗数预测收获量
 - ✅ **病虫害检测** - 识别受影响的麦穗
 - ✅ **品种研究** - 育种计划辅助
@@ -595,14 +670,15 @@ if signature_detected:
 - ✅ **全球食物安全** - 产量监测
 
 **典型应用**:
+
 ```python
 # 农业无人机监控
-model = YOLO('yolov8m.pt')
-model.train(data='globalwheat2020.yaml', epochs=100)
+model = YOLO("yolov8m.pt")
+model.train(data="globalwheat2020.yaml", epochs=100)
 
 # 应用：无人机巡查麦田
 # 应用：产量预测系统
-results = model.predict('wheat_field.jpg')
+results = model.predict("wheat_field.jpg")
 spike_count = len(results)
 predicted_yield = calculate_yield(spike_count)
 
@@ -615,9 +691,11 @@ predicted_yield = calculate_yield(spike_count)
 ## 🎭 分割数据集
 
 ### **COCO-seg, Carparts-seg, Crack-seg, Package-seg**
+
 **做什么的**: 像素级精确识别（不只是框，而是完整轮廓）
 
 **可以干嘛**:
+
 - ✅ **精确定位** - 获得物体的完整形状
 - ✅ **医学应用** - 器官/肿瘤分割
 - ✅ **工业检测** - 缺陷的精确位置
@@ -627,19 +705,20 @@ predicted_yield = calculate_yield(spike_count)
 - ✅ **遥感** - 土地覆盖分类
 
 **典型应用**:
+
 ```python
 # 医学影像分割
-model = YOLO('yolov8m-seg.pt')
-model.train(data='coco128-seg.yaml', epochs=100)
-results = model.predict('ct_scan.jpg')
+model = YOLO("yolov8m-seg.pt")
+model.train(data="coco128-seg.yaml", epochs=100)
+results = model.predict("ct_scan.jpg")
 # 获得精确的肿瘤边界，而不仅是包含框
 
 # 工业缺陷检测
-results = model.predict('product.jpg')
+results = model.predict("product.jpg")
 # 精确定位裂纹、污渍位置
 
 # 视频背景分离（直播）
-results = model.predict('video.mp4')
+results = model.predict("video.mp4")
 # 精确分割人物，去除复杂背景
 ```
 
@@ -648,9 +727,11 @@ results = model.predict('video.mp4')
 ## 🧘 姿态估计数据集
 
 ### **COCO-pose, Hand-keypoints, Dog-pose, Tiger-pose**
+
 **做什么的**: 识别身体关键点（头、肩、肘、膝等）
 
 **可以干嘛**:
+
 - ✅ **健身指导** - 动作识别（深蹲、俯卧撑等）
 - ✅ **体育分析** - 运动员技术分析
 - ✅ **医疗康复** - 物理治疗进度追踪
@@ -661,13 +742,14 @@ results = model.predict('video.mp4')
 - ✅ **内容创作** - 虚拟主播、动捕
 
 **典型应用**:
+
 ```python
 # 健身应用
-model = YOLO('yolov8m-pose.pt')
-model.train(data='coco-pose.yaml', epochs=100)
+model = YOLO("yolov8m-pose.pt")
+model.train(data="coco-pose.yaml", epochs=100)
 
 # 实时健身检查
-results = model.predict('workout_video.mp4')
+results = model.predict("workout_video.mp4")
 keypoints = results[0].keypoints.xy
 # 检查姿态是否正确
 if check_form(keypoints):
@@ -680,8 +762,8 @@ else:
 # 应用：舞蹈教学视频分析
 
 # 手势识别应用
-model = YOLO('yolov8m-pose.pt')
-results = model.predict('hand.jpg')
+model = YOLO("yolov8m-pose.pt")
+results = model.predict("hand.jpg")
 # 获得21个手指关键点
 # 识别手势：OK, Peace, Thumbs up等
 ```
@@ -691,9 +773,11 @@ results = model.predict('hand.jpg')
 ## 📦 旋转框检测（OBB）数据集
 
 ### **DOTA, DOTAv1, DOTAv1.5**
+
 **做什么的**: 检测旋转的物体（不仅仅是轴对齐框）
 
 **可以干嘛**:
+
 - ✅ **航拍物体检测** - 飞机、船只以任意角度出现
 - ✅ **卫星遥感** - 建筑、道路检测（旋转角度不固定）
 - ✅ **文件检测** - 倾斜文本识别
@@ -702,13 +786,14 @@ results = model.predict('hand.jpg')
 - ✅ **配电网** - 电线杆、变压器检测
 
 **典型应用**:
+
 ```python
 # 航拍物体检测
-model = YOLO('yolov8m-obb.pt')
-model.train(data='dota8.yaml', epochs=50)
+model = YOLO("yolov8m-obb.pt")
+model.train(data="dota8.yaml", epochs=50)
 
 # 应用：飞机跑道检测
-results = model.predict('aerial_image.jpg')
+results = model.predict("aerial_image.jpg")
 # 返回包含旋转角度的框
 
 # 应用：港口船只监控
@@ -723,24 +808,25 @@ for box in results[0].boxes:
 
 ## 🚀 应用案例总结
 
-| 应用领域 | 推荐数据集 | 任务类型 | 难度 |
-|---------|---------|--------|------|
-| **自动驾驶** | Argoverse, KITTI | 检测+追踪 | ⭐⭐⭐⭐⭐ |
-| **医学诊断** | Brain-tumor, Medical-pills | 检测+分割 | ⭐⭐⭐⭐ |
-| **零售/电商** | SKU-110K, Objects365 | 检测 | ⭐⭐⭐ |
-| **农业** | GlobalWheat2020 | 检测+分割 | ⭐⭐⭐ |
-| **无人机** | VisDrone, xView | 检测 | ⭐⭐⭐⭐ |
-| **安全监控** | COCO, Construction-PPE | 检测 | ⭐⭐⭐ |
-| **机器人** | HomeObjects-3K, COCO | 检测+分割 | ⭐⭐⭐ |
-| **运动分析** | COCO-pose | 姿态估计 | ⭐⭐⭐ |
-| **遥感/地理** | xView, DOTA | 检测+OBB | ⭐⭐⭐⭐ |
-| **通用检测** | COCO, Objects365 | 检测 | ⭐⭐ |
+| 应用领域      | 推荐数据集                 | 任务类型  | 难度       |
+| ------------- | -------------------------- | --------- | ---------- |
+| **自动驾驶**  | Argoverse, KITTI           | 检测+追踪 | ⭐⭐⭐⭐⭐ |
+| **医学诊断**  | Brain-tumor, Medical-pills | 检测+分割 | ⭐⭐⭐⭐   |
+| **零售/电商** | SKU-110K, Objects365       | 检测      | ⭐⭐⭐     |
+| **农业**      | GlobalWheat2020            | 检测+分割 | ⭐⭐⭐     |
+| **无人机**    | VisDrone, xView            | 检测      | ⭐⭐⭐⭐   |
+| **安全监控**  | COCO, Construction-PPE     | 检测      | ⭐⭐⭐     |
+| **机器人**    | HomeObjects-3K, COCO       | 检测+分割 | ⭐⭐⭐     |
+| **运动分析**  | COCO-pose                  | 姿态估计  | ⭐⭐⭐     |
+| **遥感/地理** | xView, DOTA                | 检测+OBB  | ⭐⭐⭐⭐   |
+| **通用检测**  | COCO, Objects365           | 检测      | ⭐⭐       |
 
 ---
 
 ## 💡 选择数据集的建议
 
 ### **1. 根据任务选择**
+
 ```
 目标检测 → COCO, Objects365, LVIS, Open Images
 实例分割 → COCO-seg, Carparts-seg
@@ -750,6 +836,7 @@ for box in results[0].boxes:
 ```
 
 ### **2. 根据应用场景选择**
+
 ```
 自动驾驶 → Argoverse, KITTI
 无人机 → VisDrone, xView
@@ -760,6 +847,7 @@ for box in results[0].boxes:
 ```
 
 ### **3. 快速开发流程**
+
 ```
 1. 快速验证 → COCO8
 2. 原型开发 → COCO128
@@ -768,12 +856,13 @@ for box in results[0].boxes:
 ```
 
 ### **4. 预训练权重获取**
+
 ```python
 # 大多数YOLO模型都预训练于COCO
-model = YOLO('yolov8m.pt')  # 自动下载预训练权重
+model = YOLO("yolov8m.pt")  # 自动下载预训练权重
 
 # 使用预训练权重微调自己的数据集
-model.train(data='custom.yaml', epochs=50)
+model.train(data="custom.yaml", epochs=50)
 ```
 
 ---
@@ -805,24 +894,24 @@ KITTI - 最严谨（自动驾驶）
 from ultralytics import YOLO
 
 # 1. 选择合适的预训练模型
-model = YOLO('yolov8m.pt')  # COCO预训练
+model = YOLO("yolov8m.pt")  # COCO预训练
 
 # 2. 在特定任务上微调
 model.train(
-    data='your_dataset.yaml',  # 选择数据集
+    data="your_dataset.yaml",  # 选择数据集
     epochs=100,
     imgsz=640,
-    device=0  # GPU ID
+    device=0,  # GPU ID
 )
 
 # 3. 验证和测试
 metrics = model.val()
 
 # 4. 在新图像上推理
-results = model.predict('new_image.jpg', conf=0.5)
+results = model.predict("new_image.jpg", conf=0.5)
 
 # 5. 导出为生产格式
-model.export(format='onnx')  # 或其他格式
+model.export(format="onnx")  # 或其他格式
 ```
 
 ---
@@ -833,4 +922,3 @@ model.export(format='onnx')  # 或其他格式
 - GitHub: https://github.com/ultralytics/ultralytics
 - 社区: https://community.ultralytics.com
 - 官方Hub: https://hub.ultralytics.com
-
