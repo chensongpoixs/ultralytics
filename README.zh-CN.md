@@ -284,8 +284,6 @@ Ultralytics 提供两种许可选项以满足不同需求：
   <a href="https://discord.com/invite/ultralytics"><img src="https://github.com/ultralytics/assets/raw/main/social/logo-social-discord.png" width="3%" alt="Ultralytics Discord"></a>
 </div>
 
-
-
 ```
 
 rtsp://admin:hik@12345@192.168.9.164/streaming/channels/101
